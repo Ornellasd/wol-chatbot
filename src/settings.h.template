@@ -1,0 +1,7 @@
+#ifndef __SETINGS_H
+#define __SETINGS_H
+
+#define WIFI_SSID "YOUR SSID HERE"
+#define WIFI_PASSWORD "YOUR PASSWORD HERE"
+
+#endif
