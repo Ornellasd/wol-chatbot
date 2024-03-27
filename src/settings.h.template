@@ -3,5 +3,6 @@
 
 #define WIFI_SSID "YOUR SSID HERE"
 #define WIFI_PASSWORD "YOUR PASSWORD HERE"
+#define MAC_ADDRESS "01:23:45:67:89:AB"
 
 #endif
