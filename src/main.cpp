@@ -7,29 +7,23 @@ WiFiUDP UDP;
 WakeOnLan WOL(UDP);
 ESP8266WebServer server(80);
 
+// String or char here? which is better
 const char* ssid = WIFI_SSID;
 const char* password = WIFI_PASSWORD;
-
 const char* MACAddress = MAC_ADDRESS;
 
 void beginWifi();
 void beginServer();
 void handleRoot();
+void wakeServer();
 
-void beginServer() {
-    server.on("/", handleRoot);
-    server.begin();
-    Serial.println("HTTP server started.");
-}
-
-void setup() {
+// why do some people have "void" in parameter as well?
+void setup() {  
     Serial.begin(9600);
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
     beginWifi();
     beginServer();
-    // 
-    Serial.println(MACAddress);
 }
 
 void beginWifi() {
@@ -50,13 +44,19 @@ void beginWifi() {
     Serial.println(WiFi.localIP());
 }
 
-void wakeServer() {
-    WOL.sendMagicPacket(MACAddress);
+void beginServer() {
+    server.on("/", handleRoot);
+    server.begin();
+    Serial.println("HTTP server started.");
 }
 
 void handleRoot() {
     server.send(200, "text/plain", "HALLOTJES!, waking server..");
     wakeServer();
+}
+
+void wakeServer() {
+    WOL.sendMagicPacket(MACAddress);
 }
 
 void loop() {
