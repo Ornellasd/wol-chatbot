@@ -1,4 +1,5 @@
 #include <ESP8266WiFi.h>
+#include <ESP8266Ping.h>
 #include <WiFiClientSecure.h>
 #include <UniversalTelegramBot.h>
 #include <ArduinoJson.h>
@@ -89,6 +90,14 @@ void handleNewMessages(int numNewMesesages) {
         if (text == "/wake_server") {
             bot.sendMessage(chat_id, "Waking server", "");
             // WOL.sendMagicPacket(MACAddress);
+        }
+
+        if (text == "/state") {
+            if (Ping.ping(SERVER_IP_ADDRESS)) {
+                bot.sendMessage(chat_id, "Server: BLANK is ON.\n");
+            } else {
+                bot.sendMessage(chat_id, "Server: BLANK is OFF.\n");
+            }
         }
     }
 
