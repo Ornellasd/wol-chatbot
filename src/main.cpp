@@ -1,29 +1,42 @@
 #include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>
+#include <WiFiClientSecure.h>
+#include <UniversalTelegramBot.h>
+#include <ArduinoJson.h>
 #include <WakeOnLan.h>
 #include "settings.h"
 
-WiFiUDP UDP;
-WakeOnLan WOL(UDP);
-ESP8266WebServer server(80);
-
 // String or char here? which is better
+// or define like in settings.h?
 const char* ssid = WIFI_SSID;
 const char* password = WIFI_PASSWORD;
 const char* MACAddress = MAC_ADDRESS;
 
+WiFiUDP UDP;
+WakeOnLan WOL(UDP);
+X509List cert(TELEGRAM_CERTIFICATE_ROOT);
+WiFiClientSecure client;
+UniversalTelegramBot bot(BOT_TOKEN, client);
+
+int botRequestDelay = 1000;
+unsigned long lastTimeBotRan;
+
+// const int ledPin = 2;
+// bool ledState = LOW;
+
 void beginWifi();
-void beginServer();
-void handleRoot();
-void wakeServer();
 
 // why do some people have "void" in parameter as well?
 void setup() {  
     Serial.begin(9600);
+
+     #ifdef ESP8266
+        configTime(0, 0, "pool.ntp.org");      // get UTC time via NTP
+        client.setTrustAnchors(&cert);         // Add root certificate for api.telegram.org
+    #endif
+
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
     beginWifi();
-    beginServer();
 }
 
 void beginWifi() {
@@ -44,21 +57,56 @@ void beginWifi() {
     Serial.println(WiFi.localIP());
 }
 
-void beginServer() {
-    server.on("/", handleRoot);
-    server.begin();
-    Serial.println("HTTP server started.");
-}
+// Telegram Bot functions //
+void handleNewMessages(int numNewMesesages) {
+    Serial.println("handleNewMessages");
+    Serial.println(String(numNewMesesages));
 
-void handleRoot() {
-    server.send(200, "text/plain", "HALLOTJES!, waking server..");
-    wakeServer();
-}
+    for (int i=0; i<numNewMesesages; i++) {
+        // Chat id of the requester
+        String chat_id = String(bot.messages[i].chat_id);
 
-void wakeServer() {
-    WOL.sendMagicPacket(MACAddress);
+        if (chat_id != CHAT_ID) {
+            bot.sendMessage(chat_id, "Unauthorized user", "");
+            continue;
+        }
+
+        // Print the received message
+        String text = bot.messages[i].text;
+        Serial.println(text);
+
+        String from_name = bot.messages[i].from_name;
+
+        if (text == "/start") {
+            String welcome = "Welcome, " + from_name + ".\n";
+            welcome += "Use the following commands to control your ouputs.\n\n";
+            welcome += "/wake_server to turn server ON\n";
+            welcome += "/sleep_server to turn server OFF\n";
+            welcome += "/state to request current state of server\n";
+            bot.sendMessage(chat_id, welcome, "");
+        }
+
+        if (text == "/wake_server") {
+            bot.sendMessage(chat_id, "Waking server", "");
+            // WOL.sendMagicPacket(MACAddress);
+        }
+    }
+
+  
+
 }
+// END Telegram Bot functions //
 
 void loop() {
-    server.handleClient();
+    if (millis() > lastTimeBotRan + botRequestDelay) {
+        int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+
+        while(numNewMessages) {
+            Serial.println("got response");
+            handleNewMessages(numNewMessages);
+            numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+        }
+
+        lastTimeBotRan = millis();
+    }
 }
