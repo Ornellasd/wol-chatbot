@@ -4,12 +4,11 @@
 #include <UniversalTelegramBot.h>
 #include <ArduinoJson.h>
 #include <WakeOnLan.h>
+
 #include "settings.h"
 
-// String or char here? which is better
-// or define like in settings.h?
 const char* ssid = WIFI_SSID;
-const char* password = WIFI_PASSWORD;
+const char* wifiPassword = WIFI_PASSWORD;
 const char* MACAddress = MAC_ADDRESS;
 
 WiFiUDP UDP;
@@ -20,9 +19,6 @@ UniversalTelegramBot bot(BOT_TOKEN, client);
 
 int botRequestDelay = 1000;
 unsigned long lastTimeBotRan;
-
-// const int ledPin = 2;
-// bool ledState = LOW;
 
 void beginWifi();
 
@@ -41,7 +37,7 @@ void setup() {
 }
 
 void beginWifi() {
-    WiFi.begin(ssid, password);
+    WiFi.begin(ssid, wifiPassword);
     Serial.println("");
 
     while (WiFi.status() != WL_CONNECTED) {
@@ -58,7 +54,6 @@ void beginWifi() {
     Serial.println(WiFi.localIP());
 }
 
-// Telegram Bot functions //
 void handleNewMessages(int numNewMesesages) {
     Serial.println("handleNewMessages");
     Serial.println(String(numNewMesesages));
@@ -78,7 +73,7 @@ void handleNewMessages(int numNewMesesages) {
 
         String from_name = bot.messages[i].from_name;
 
-        if (text == "/start") {
+        if (text == "/help") {
             String welcome = "Welcome, " + from_name + ".\n";
             welcome += "Use the following commands to control your ouputs.\n\n";
             welcome += "/wake_server to turn server ON\n";
@@ -89,9 +84,16 @@ void handleNewMessages(int numNewMesesages) {
 
         if (text == "/wake_server") {
             bot.sendMessage(chat_id, "Waking server", "");
-            // WOL.sendMagicPacket(MACAddress);
+            WOL.sendMagicPacket(MAC_ADDRESS);
+            // Ping server every second to check status in order to send successful waken message
+            while (!Ping.ping(SERVER_IP_ADDRESS))
+            {
+                delay(1000);
+            }
+            bot.sendMessage(chat_id, "BLANK, succesfully wakened!");
         }
 
+        // Get state of server by pinging it
         if (text == "/state") {
             if (Ping.ping(SERVER_IP_ADDRESS)) {
                 bot.sendMessage(chat_id, "Server: BLANK is ON.\n");
@@ -100,11 +102,7 @@ void handleNewMessages(int numNewMesesages) {
             }
         }
     }
-
-  
-
 }
-// END Telegram Bot functions //
 
 void loop() {
     if (millis() > lastTimeBotRan + botRequestDelay) {
